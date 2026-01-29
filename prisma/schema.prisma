@@ -1,0 +1,337 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// AUTHENTICATION MODELS
+// ===========================================
+
+model roles {
+  id Int @id @default(autoincrement())
+
+  name String @unique
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users       users[]
+  permissions permissions[]
+}
+
+model permissions {
+  id Int @id @default(autoincrement())
+
+  name String @unique
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  roles roles[]
+}
+
+model users {
+  id Int @id @default(autoincrement())
+
+  roles roles[]
+
+  email    String @unique
+  password String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cctv cctv[]
+}
+
+model cctv {
+  id Int @id @default(autoincrement())
+
+  user_id Int
+
+  cctv_name      String
+  ip_cctv        String?
+  ip_server      String?
+  rtsp           String
+  embed          String?
+  latitude       String?
+  longitude      String?
+  type_streaming type_streaming?
+  is_active      Boolean
+  polygon_img    String          @db.Text
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  model_has_polygons model_has_polygons[]
+  primary_analytics  primary_analytics[]
+  model_has_embeds   model_has_embeds[]
+
+  users users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  activity_monitoring activity_monitoring[]
+
+  animal_population animal_population[]
+
+  weapon_detection weapon_detection[]
+
+  nomorLambungs nomor_lambung[]
+
+  ppeDetections ppe_detection[]
+}
+
+enum type_streaming {
+  embed
+  m3u8
+}
+
+model servers {
+  id Int @id @default(autoincrement())
+
+  ip          String  @unique
+  description String?
+
+  max_nomor_lambung Int @default(0)
+  cur_nomor_lambung Int @default(0)
+  max_ppe_detection Int @default(0)
+  cur_ppe_detection Int @default(0)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  primary_analytics primary_analytics[]
+}
+
+model primary_analytics {
+  id Int @id @default(autoincrement())
+
+  servers_id       Int?
+  type_analytic_id Int
+
+  name        String
+  description String? @db.Text
+  status      String  @default("pending") // pending, active, not active
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cctv             cctv[]
+  sub_analytics    sub_analytics[]
+  model_has_embeds model_has_embeds[]
+
+  servers       servers?      @relation(fields: [servers_id], references: [id], onDelete: SetNull)
+  type_analytic type_analytic @relation(fields: [type_analytic_id], references: [id], onDelete: Restrict)
+
+  activity_monitoring activity_monitoring[]
+
+  animal_population animal_population[]
+
+  weapon_detection weapon_detection[]
+
+  nomorLambungs nomor_lambung[]
+
+  ppeDetections ppe_detection[]
+}
+
+model sub_analytics {
+  id Int @id @default(autoincrement())
+
+  primary_analytic_id  Int
+  sub_type_analytic_id Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  primary_analytics primary_analytics @relation(fields: [primary_analytic_id], references: [id], onDelete: Cascade)
+  sub_type_analytic sub_type_analytic @relation(fields: [sub_type_analytic_id], references: [id], onDelete: Cascade)
+}
+
+model type_analytic {
+  id Int @id @default(autoincrement())
+
+  name String @unique
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  primary_analytics primary_analytics[]
+}
+
+model sub_type_analytic {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  sub_primary_analytics sub_analytics[]
+}
+
+model model_has_values {
+  id Int @id @default(autoincrement())
+
+  model_id   Int
+  model_type String // primary or sub
+
+  value_name String
+  value      String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model model_has_polygons {
+  id Int @id @default(autoincrement())
+
+  name       String @default("receptionist")
+  cctv_id    Int
+  model_id   Int
+  model_type String // primary or sub
+
+  polygon Json
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cctv cctv @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+}
+
+model model_has_embeds {
+  id Int @id @default(autoincrement())
+
+  cctv_id  Int
+  model_id Int
+
+  embed String @db.Text
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cctv              cctv              @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+  primary_analytics primary_analytics @relation(fields: [model_id], references: [id], onDelete: Cascade)
+}
+
+// ===========================================
+// USED ANALYTICS MODELS
+// ===========================================
+
+model nomor_lambung {
+  id Int @id @default(autoincrement())
+
+  primary_analytics_id Int
+  cctv_id              Int
+
+  status      String
+  avg_speed   Float
+  max_speed   Float
+  no_lambung  String
+  capture_img String? @db.Text
+
+  datetime_send DateTime @default(now())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  primary_analytics primary_analytics @relation(fields: [primary_analytics_id], references: [id], onDelete: Cascade)
+  cctv              cctv              @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+}
+
+model ppe_detection {
+  id Int @id @default(autoincrement())
+
+  primary_analytics_id Int
+  cctv_id              Int
+
+  object_id Int?
+
+  vest    Boolean?
+  helmet  Boolean?
+  mask    Boolean?
+  gloves  Boolean?
+  goggles Boolean?
+
+  capture_person String?
+
+  datetime_send DateTime @default(now())
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  primary_analytics primary_analytics @relation(fields: [primary_analytics_id], references: [id], onDelete: Cascade)
+  cctv              cctv              @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+}
+
+// ===========================================
+// NOT USED ANALYTICS MODELS
+// ===========================================
+
+model weapon_detection {
+  id Int @id @default(autoincrement())
+
+  primary_analytics_id Int
+  cctv_id              Int
+
+  weapon_type String
+  capture_img String? @db.Text
+  confidence  Float
+
+  datetime_send DateTime @default(now())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  primary_analytics primary_analytics @relation(fields: [primary_analytics_id], references: [id], onDelete: Cascade)
+  cctv              cctv              @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+}
+
+// ===========================================
+// CRON JOBS MODELS
+// ===========================================
+
+// ===========================================
+// PROBABLY NOT USED ANALYTICS MODELS
+// ===========================================
+model animal_population {
+  id Int @id @default(autoincrement())
+
+  primary_analytics_id Int
+  cctv_id              Int
+
+  total  Int
+  normal Int
+  sick   Int
+  dead   Int
+
+  datetime_send DateTime @default(now())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  primary_analytics primary_analytics @relation(fields: [primary_analytics_id], references: [id], onDelete: Cascade)
+  cctv              cctv              @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+}
+
+model activity_monitoring {
+  id Int @id @default(autoincrement())
+
+  primary_analytics_id Int
+  cctv_id              Int
+
+  capture_img       String?  @db.Text
+  sub_type_analytic String
+  datetime_send     DateTime @default(now())
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  primary_analytics primary_analytics @relation(fields: [primary_analytics_id], references: [id], onDelete: Cascade)
+  cctv              cctv              @relation(fields: [cctv_id], references: [id], onDelete: Cascade)
+}
