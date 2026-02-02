@@ -23,11 +23,31 @@ export const getAllCctvs = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Get validated query params from middleware
+    const validatedQuery = (req as any).validatedQuery || {};
+    const { typeAnalyticIds, isActive } = validatedQuery;
+
     // Build where clause for search
-    const whereClause = handleSearch(req, {
+    const whereClause: any = handleSearch(req, {
       searchFields: ['cctv_name'],
       searchMode: 'contains',
     });
+
+    // Add filter for typeAnalyticIds if provided
+    if (typeAnalyticIds && typeAnalyticIds.length > 0) {
+      whereClause.primary_analytics = {
+        some: {
+          type_analytic_id: {
+            in: typeAnalyticIds,
+          },
+        },
+      };
+    }
+
+    // Add filter for isActive if provided
+    if (isActive !== undefined) {
+      whereClause.is_active = isActive;
+    }
 
     // Build order by clause for sorting
     const orderByClause = handleSorting(req, {

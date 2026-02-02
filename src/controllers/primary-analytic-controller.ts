@@ -31,7 +31,7 @@ export const createPrimaryAnalytic = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { serverId, cctvId, primaryAnalytics, isServer = true } = req.body;
+    const { serverId, cctvId, primaryAnalytics, isServer = false } = req.body;
 
     // Validate type analytic exists
     const typeAnalytic = await prisma.type_analytic.findUnique({

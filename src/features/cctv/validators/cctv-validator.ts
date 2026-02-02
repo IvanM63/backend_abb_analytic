@@ -102,6 +102,32 @@ export const primaryAnalyticParamSchema = z.object({
     .regex(/^\d+$/, 'Primary Analytics ID must be a valid number'),
 });
 
+// Query params schema for filtering CCTVs
+export const cctvQueryParamsSchema = z.object({
+  typeAnalyticIds: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      return val.split(',').map((id) => {
+        const parsed = parseInt(id.trim());
+        if (isNaN(parsed)) {
+          throw new Error('typeAnalyticIds must contain valid numbers');
+        }
+        return parsed;
+      });
+    }),
+  isActive: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      throw new Error('isActive must be "true" or "false"');
+    }),
+});
+
 // Type definitions for request validation
 export type CreateCctvFormInput = z.infer<typeof createCctvFormSchema>;
 export type UpdateCctvFormInput = z.infer<typeof updateCctvFormSchema>;
@@ -109,6 +135,7 @@ export type CreateCctvInput = z.infer<typeof createCctvSchema>;
 export type UpdateCctvInput = z.infer<typeof updateCctvSchema>;
 export type CctvParam = z.infer<typeof cctvParamSchema>;
 export type PrimaryAnalyticParam = z.infer<typeof primaryAnalyticParamSchema>;
+export type CctvQueryParams = z.infer<typeof cctvQueryParamsSchema>;
 
 // Middleware for validating CCTV requests
 export const validateCreateCctv = (
@@ -292,6 +319,37 @@ export const validateUpdateCctvForm = (
         success: false,
         message: 'Validation error',
         errors: 'Invalid input data',
+      });
+    }
+  }
+};
+
+// Middleware for validating query params for getAllCctvs
+export const validateCctvQueryParams = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  try {
+    const validatedQuery = cctvQueryParamsSchema.parse(req.query);
+
+    // Attach validated query to request for use in controller
+    (req as any).validatedQuery = validatedQuery;
+
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: error.errors,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors:
+          error instanceof Error ? error.message : 'Invalid query parameters',
       });
     }
   }

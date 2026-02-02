@@ -13,6 +13,7 @@ import {
   validateUpdateCctvForm,
   validateCctvParam,
   validatePrimaryAnalyticParam,
+  validateCctvQueryParams,
 } from '../validators/cctv-validator';
 import { authenticateToken } from '../../../middlewares/auth-middleware';
 import upload from '../../../config/multer';
@@ -20,7 +21,7 @@ import upload from '../../../config/multer';
 const router = Router();
 
 // Public routes - usually these would be protected in production
-router.get('/', authenticateToken, getAllCctvs);
+router.get('/', authenticateToken, validateCctvQueryParams, getAllCctvs);
 router.get('/:id', authenticateToken, validateCctvParam, getCctvById);
 
 // Route untuk get CCTV beserta analytic
